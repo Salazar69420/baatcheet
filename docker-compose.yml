@@ -5,7 +5,10 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
+      # Inside the container the app always listens on 3000; PORT in .env only
+      # changes the host side of the mapping below.
       HOST: 0.0.0.0
+      PORT: "3000"
       DATA_DIR: /data
     # Only reachable from this machine. Expose it to your tailnet with:
     #   sudo tailscale serve --bg 3000
