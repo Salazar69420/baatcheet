@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env server/index.js",
     "dev": "node --env-file-if-exists=.env --watch server/index.js",
-    "test": "node --test test/",
+    "test": "node --test \"test/*.test.js\"",
     "transcribe": "node --env-file-if-exists=.env scripts/transcribe-file.js"
   },
   "engines": {
