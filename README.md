@@ -72,6 +72,13 @@ npm run transcribe -- ~/Downloads/voice-note.ogg
 See **[SETUP.md](SETUP.md)**. In short: Docker, then `docker compose up -d --build`, then
 `sudo tailscale serve --bg 3000`, then share the machine with your friend.
 
+**Using an AI agent on the server?** Tell it:
+
+> Scan https://github.com/Salazar69420/baatcheet, read AGENT_SETUP.md, then plan and implement it with what we have.
+
+[AGENT_SETUP.md](AGENT_SETUP.md) is a complete, safety-checked task for the agent. It covers
+install, configuration, an end-to-end transcription test, Tailscale HTTPS, backups and a hand-off report.
+
 ## Configuration (`.env`)
 
 | Variable | Default | Meaning |

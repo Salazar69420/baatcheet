@@ -7,6 +7,9 @@ The result: baatcheet runs in Docker, listening only on `127.0.0.1:3000`, and
 **Tailscale** publishes it over HTTPS to the people on your tailnet. Nothing is opened to
 the public internet.
 
+> 🤖 **Deploying with an AI agent?** Point it at [AGENT_SETUP.md](AGENT_SETUP.md) instead. It contains
+> the same steps written as an agent task, with safety rules, verification checks, backups and a hand-off report.
+
 ---
 
 ## 0. What you need
