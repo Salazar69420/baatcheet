@@ -23,7 +23,9 @@ export async function getMe ({ ask = true } = {}) {
     // null instantly, which used to spin forever and freeze the page.
     const name = storedName() || await askName()
     setStoredName(name)
-    info.me = { login: `local:${name}`, name, source: 'local' }
+    // ask again with the name header so we get the exact login the server uses
+    const again = await fetch('/api/me', { headers: nameHeader() }).then(r => r.json()).catch(() => null)
+    info.me = again?.me || { login: `local:${name}`, name, source: 'local' }
   }
   meCache = info
   return info

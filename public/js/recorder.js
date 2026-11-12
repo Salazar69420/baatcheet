@@ -49,6 +49,9 @@ export class ChunkRecorder extends EventTarget {
     this.pending = [] // chunks waiting to upload
     this.uploading = false
     this.current = null
+    this.chunksMade = 0
+    this.bytesMade = 0
+    this.lastError = ''
   }
 
   start () {
@@ -60,31 +63,49 @@ export class ChunkRecorder extends EventTarget {
 
   _startOne () {
     if (!this.running) return
-    const opts = { audioBitsPerSecond: 32_000 }
-    if (this.mime) opts.mimeType = this.mime
-    const rec = new MediaRecorder(this.stream, opts)
+    let rec
     const parts = []
     const startedAt = this.now()
     const t0 = performance.now()
-    const seq = this.seq++
+    try {
+      const opts = { audioBitsPerSecond: 32_000 }
+      if (this.mime && !this.useDefaultMime) opts.mimeType = this.mime
+      rec = new MediaRecorder(this.stream, opts)
+      rec.ondataavailable = (e) => { if (e.data?.size) parts.push(e.data) }
+      rec.onerror = (e) => {
+        const err = e.error || e
+        this.lastError = `${err.name || 'Error'}: ${err.message || ''}`.trim()
+        this.dispatchEvent(new CustomEvent('error', { detail: err }))
+      }
+      rec.start()
+    } catch (err) {
+      // e.g. iOS refusing a mimeType, or the previous recorder still finalizing.
+      this.lastError = `${err.name || 'Error'}: ${err.message || ''}`.trim()
+      this.dispatchEvent(new CustomEvent('error', { detail: err }))
+      if (this.mime && !this.useDefaultMime) this.useDefaultMime = true // retry with the browser's default format
+      this.timer = setTimeout(() => this._startOne(), 2000)
+      return
+    }
 
-    rec.ondataavailable = (e) => { if (e.data?.size) parts.push(e.data) }
+    const seq = this.seq++
     rec.onstop = () => {
       const mime = parts[0]?.type || rec.mimeType || this.mime || ''
       const blob = new Blob(parts, { type: mime })
+      this.chunksMade++
+      this.bytesMade += blob.size
       if (blob.size > 0) {
         this.pending.push({ seq, startedAt, durationMs: Math.round(performance.now() - t0), blob, track: this.track, mime })
         this._drain()
       }
-      this.dispatchEvent(new CustomEvent('chunk-closed', { detail: { seq } }))
+      this.dispatchEvent(new CustomEvent('chunk-closed', { detail: { seq, bytes: blob.size } }))
     }
-    rec.onerror = (e) => this.dispatchEvent(new CustomEvent('error', { detail: e.error || e }))
 
-    rec.start()
     this.current = rec
     this.timer = setTimeout(() => {
-      if (rec.state !== 'inactive') rec.stop()
-      this._startOne()
+      if (rec.state === 'inactive') return this._startOne()
+      // start the next chunk only after this one has fully finished (safer on iOS)
+      rec.addEventListener('stop', () => this._startOne(), { once: true })
+      rec.stop()
     }, this.chunkMs)
   }
 

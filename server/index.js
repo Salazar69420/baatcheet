@@ -71,7 +71,9 @@ app.post('/api/diag', express.json({ limit: '4kb' }), (req, res) => {
     `ice=${str(d.ice)} conn=${str(d.conn)} route=${str(d.route) || '?'} ` +
     `sent=${n(d.sentKB)}KB recv=${n(d.recvKB)}KB level=${n(d.recvLevel)} lost=${n(d.packetsLost)} ` +
     `audio=${a.paused ? 'PAUSED' : 'playing'}${a.muted ? ' MUTED' : ''} ready=${n(a.readyState)}${a.playError ? ` playError=${str(a.playError)}` : ''} ` +
-    `mic=${d.micEnabled === false ? 'muted' : str(d.micState) || '?'} rec=${str(d.recMime) || 'none'}`)
+    `mic=${d.micEnabled === false ? 'user-muted' : str(d.micState) || '?'}${d.micMuted ? ' OS-PAUSED' : ''} micLabel="${str(d.micLabel)}" ` +
+    `rec=${str(d.recMime) || 'none'} recChunks=${n(d.recChunks)} recKB=${n(d.recKB)}${d.recError ? ` recError="${str(d.recError)}"` : ''}` +
+    `${d.silentStreak ? ` silentStreak=${n(d.silentStreak)}` : ''}${d.micIssue ? ` micIssue="${str(d.micIssue)}"` : ''}`)
   res.status(204).end()
 })
 

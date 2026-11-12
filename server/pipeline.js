@@ -12,7 +12,7 @@ export function createPipeline ({ db, config, notify, log = console }) {
 
     db.setChunkStatus(chunk.id, 'processing')
     db.bumpAttempts(chunk.id)
-    notify(chunk.call_id, { type: 'chunk', id: chunk.id, status: 'processing' })
+    notify(chunk.call_id, { type: 'chunk', id: chunk.id, status: 'processing', speaker: chunk.speaker_login })
 
     let converted
     try {
@@ -29,7 +29,7 @@ export function createPipeline ({ db, config, notify, log = console }) {
     const { mp3, maxVolumeDb } = converted
     if (maxVolumeDb !== null && maxVolumeDb < config.silenceDb) {
       db.setChunkStatus(chunk.id, 'silent')
-      notify(chunk.call_id, { type: 'chunk', id: chunk.id, status: 'silent' })
+      notify(chunk.call_id, { type: 'chunk', id: chunk.id, status: 'silent', speaker: chunk.speaker_login })
       return
     }
 
@@ -39,14 +39,14 @@ export function createPipeline ({ db, config, notify, log = console }) {
 
     if (!result.original && !result.english) {
       db.setChunkStatus(chunk.id, 'silent')
-      notify(chunk.call_id, { type: 'chunk', id: chunk.id, status: 'silent' })
+      notify(chunk.call_id, { type: 'chunk', id: chunk.id, status: 'silent', speaker: chunk.speaker_login })
       return
     }
 
     const segment = db.saveSegment(chunk, result)
     db.setChunkStatus(chunk.id, 'done')
     notify(chunk.call_id, { type: 'segment', segment })
-    notify(chunk.call_id, { type: 'chunk', id: chunk.id, status: 'done' })
+    notify(chunk.call_id, { type: 'chunk', id: chunk.id, status: 'done', speaker: chunk.speaker_login })
   }
 
   const queue = new JobQueue({
@@ -61,7 +61,7 @@ export function createPipeline ({ db, config, notify, log = console }) {
       log.error(`[transcribe] chunk ${id} failed: ${err.message}`)
       db.setChunkStatus(id, 'failed', err.message)
       const chunk = db.getChunk(id)
-      if (chunk) notify(chunk.call_id, { type: 'chunk', id, status: 'failed', error: err.message })
+      if (chunk) notify(chunk.call_id, { type: 'chunk', id, status: 'failed', error: err.message, speaker: chunk.speaker_login })
     }
   })
 

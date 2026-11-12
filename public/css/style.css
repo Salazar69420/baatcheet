@@ -165,3 +165,5 @@ input {
 .net { margin: 0; font-size: .8rem; color: var(--muted); min-height: 1.1em; }
 .net[data-kind="warn"] { color: var(--warn); }
 #sound[hidden] { display: none; }
+.mic-msg { margin: 0; padding: .6rem .8rem; border-radius: 10px; font-size: .9rem; background: var(--mine); color: var(--warn); border: 1px solid var(--warn); }
+#micFix[hidden], .mic-msg[hidden] { display: none; }

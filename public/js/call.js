@@ -28,6 +28,11 @@ let transcript
 let stopMeters = () => {}
 let diagTimer = null
 let playError = ''
+let myLogin = null
+let silentStreak = 0 // my own chunks the server found silent, in a row
+let micIssue = ''
+
+const MIC_CONSTRAINTS = { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }
 
 async function main () {
   warnIfInAppBrowser()
@@ -38,6 +43,7 @@ async function main () {
   }
 
   const info = await getMe()
+  myLogin = info.me.login
   $('meName').textContent = `${info.me.name} (you)`
   $('meInitial').textContent = initial(info.me.name)
   transcript = new TranscriptView($('transcript'), { myLogin: info.me.login })
@@ -60,15 +66,21 @@ async function main () {
   try {
     localStream = new URLSearchParams(location.search).has('tone')
       ? testToneStream()
-      : await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: false
-      })
+      : await navigator.mediaDevices.getUserMedia(MIC_CONSTRAINTS)
   } catch (err) {
     ui.status(`Microphone blocked: ${err.message}. Allow mic access and reload.`, 'error')
     return
   }
   recordStream = new MediaStream(localStream.getAudioTracks().map(t => t.clone()))
+  watchMic()
+  $('micFix').onclick = restartMic
+  // iPhones pause the mic when you switch apps or lock the screen; check when we come back.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return
+    const t = localStream.getAudioTracks()[0]
+    if (!t || t.readyState === 'ended' || t.muted) micProblem('Your microphone was paused while the page was in the background.')
+    ensurePlaying(false)
+  })
 
   $('mute').onclick = toggleMute
   $('hangup').onclick = hangUp
@@ -141,9 +153,21 @@ function onMessage (msg) {
       transcript.add(msg.segment)
       break
 
-    case 'chunk':
-      if (msg.status === 'failed') ui.upload(`⚠ A chunk failed to transcribe: ${msg.error || 'unknown error'} (retry from History)`)
+    case 'chunk': {
+      const mine = msg.speaker && msg.speaker === myLogin
+      if (msg.status === 'failed') {
+        ui.upload(`⚠ ${mine ? 'Your' : 'Their'} audio chunk failed to transcribe: ${msg.error || 'unknown error'}`)
+      }
+      if (!mine) break
+      const micOn = localStream?.getAudioTracks()[0]?.enabled
+      if (msg.status === 'silent' && micOn) {
+        if (++silentStreak >= 2) micProblem('The server is only receiving silence from your microphone.')
+      } else if (msg.status === 'done') {
+        silentStreak = 0
+        if (micIssue.startsWith('The server')) micOk()
+      }
       break
+    }
   }
 }
 
@@ -229,7 +253,14 @@ function startDiagnostics (peer) {
           audio: { paused: audio.paused, muted: audio.muted, readyState: audio.readyState, playError },
           micEnabled: localStream.getAudioTracks()[0]?.enabled,
           micState: localStream.getAudioTracks()[0]?.readyState,
-          recMime: recorder?.mime ?? null
+          micMuted: localStream.getAudioTracks()[0]?.muted,
+          micLabel: localStream.getAudioTracks()[0]?.label,
+          micIssue,
+          silentStreak,
+          recMime: recorder?.mime ?? null,
+          recChunks: recorder?.chunksMade ?? 0,
+          recKB: Math.round((recorder?.bytesMade ?? 0) / 1024),
+          recError: recorder?.lastError || ''
         })
       }).catch(() => {})
     }
@@ -261,6 +292,7 @@ function startRecording () {
   recorder.addEventListener('upload-retry', () => ui.upload(`Uploading… (${recorder?.backlog ?? 0} waiting, retrying)`))
   recorder.addEventListener('uploaded', () => ui.upload(recorder?.backlog ? `Uploading… (${recorder.backlog} waiting)` : ''))
   recorder.addEventListener('upload-failed', (e) => ui.upload(`⚠ Gave up uploading chunk #${e.detail.seq}`))
+  recorder.addEventListener('error', (e) => ui.upload(`⚠ Recorder problem: ${e.detail?.message || e.detail?.name || e.detail}. Retrying…`))
   recorder.start()
   ui.rec(true)
 }
@@ -305,6 +337,56 @@ async function hangUp () {
   signal?.close()
   for (const s of [localStream, recordStream]) s?.getTracks().forEach(t => t.stop())
   location.href = `/history.html?id=${encodeURIComponent(callId)}`
+}
+
+// ---- microphone health ----------------------------------------------------------
+
+function watchMic () {
+  const t = localStream.getAudioTracks()[0]
+  if (!t) return micProblem('No microphone found.')
+  t.onmute = () => micProblem('Your phone/browser paused your microphone (another app or call may be using it).')
+  t.onunmute = () => { if (!micIssue.startsWith('The server')) micOk() }
+  t.onended = () => micProblem('Your microphone stopped.')
+}
+
+function micProblem (why) {
+  micIssue = why
+  $('micMsg').textContent = `⚠ ${why} Your friend may not hear you. Tap “Restart my microphone”. ` +
+    'Also close other tabs with this call, end any phone/WhatsApp call, and disconnect Bluetooth earbuds you are not wearing.'
+  $('micMsg').hidden = false
+  $('micFix').hidden = false
+}
+
+function micOk () {
+  micIssue = ''
+  $('micMsg').hidden = true
+  $('micFix').hidden = true
+}
+
+/** Get a fresh mic and swap it into the live call and the recorder without hanging up. */
+async function restartMic () {
+  $('micFix').disabled = true
+  $('micMsg').textContent = 'Restarting microphone…'
+  try {
+    const enabled = localStream.getAudioTracks()[0]?.enabled ?? true
+    const fresh = await navigator.mediaDevices.getUserMedia(MIC_CONSTRAINTS)
+    const track = fresh.getAudioTracks()[0]
+    track.enabled = enabled
+    const sender = link?.pc.getSenders().find(s => s.track?.kind === 'audio') || link?.pc.getSenders()[0]
+    if (sender) await sender.replaceTrack(track)
+    for (const s of [localStream, recordStream]) s?.getTracks().forEach(t => t.stop())
+    localStream = fresh
+    recordStream = new MediaStream([track.clone()])
+    watchMic()
+    silentStreak = 0
+    if (recorder) { await stopRecording(); startRecording() }
+    micOk()
+    ensurePlaying(false)
+  } catch (err) {
+    micProblem(`Could not restart the microphone (${err.name}: ${err.message}).`)
+  } finally {
+    $('micFix').disabled = false
+  }
 }
 
 /** `?tone=1` sends a soft beep instead of the mic, to test the audio path without speaking. */

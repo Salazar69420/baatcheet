@@ -41,16 +41,26 @@ async function showCall () {
     view.startTime = segments.length ? Math.min(...segments.map(s => s.started_at)) : null
     view.addAll(segments)
 
-    const count = (s) => chunks.filter(c => c.status === s).length
-    const pending = count('pending') + count('processing')
-    const failed = count('failed')
-    const parts = [`${count('done')} transcribed`, `${count('silent')} silent`]
-    if (pending) parts.push(`${pending} in progress`)
-    if (failed) {
-      const lastErr = chunks.find(c => c.status === 'failed')?.error
-      parts.push(`${failed} failed${lastErr ? ` (${lastErr})` : ''}`)
-    }
-    $('progress').textContent = chunks.length ? `Audio chunks: ${parts.join(' · ')}` : 'No audio was recorded for this call.'
+    const pending = chunks.filter(c => c.status === 'pending' || c.status === 'processing').length
+    const failed = chunks.filter(c => c.status === 'failed').length
+
+    // One line per speaker, so it's obvious when one person's audio never made it.
+    const speakers = new Map(participants.map(p => [p.login, p.name]))
+    for (const c of chunks) if (!speakers.has(c.speaker_login)) speakers.set(c.speaker_login, c.speaker_name)
+    const lines = [...speakers].map(([login, name]) => {
+      const mine = chunks.filter(c => c.speaker_login === login)
+      if (!mine.length) return `${name}: no audio received`
+      const n = (s) => mine.filter(c => c.status === s).length
+      const parts = [`${n('done')} transcribed`, `${n('silent')} silent`]
+      const p = n('pending') + n('processing')
+      if (p) parts.push(`${p} in progress`)
+      if (n('failed')) {
+        const lastErr = mine.find(c => c.status === 'failed')?.error
+        parts.push(`${n('failed')} failed${lastErr ? ` (${lastErr})` : ''}`)
+      }
+      return `${name}: ${parts.join(' · ')}`
+    })
+    $('progress').textContent = chunks.length ? `Audio chunks — ${lines.join('  |  ')}` : 'No audio was recorded for this call.'
     $('retry').hidden = !failed
     return pending
   }
