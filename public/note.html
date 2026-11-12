@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>Voice note · baatcheet</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="note-page">
+  <header class="bar">
+    <a href="/" class="brand">baatcheet</a>
+    <span id="rec" class="rec-badge" hidden>● Recording</span>
+    <nav><a href="/history.html">History</a></nav>
+  </header>
+
+  <main class="note">
+    <section class="recorder">
+      <p class="muted note-hint" id="hint">Press record and talk in Hindi, English or both. You get the words back in English, ready to copy.</p>
+      <button id="recBtn" class="rec-btn" aria-pressed="false" aria-label="Start recording">
+        <span class="rec-dot"></span>
+      </button>
+      <div class="rec-meta">
+        <span id="timer" class="timer">00:00</span>
+        <span id="level" class="level" aria-hidden="true"><span></span></span>
+      </div>
+      <p id="status" class="status">Tap the red button to start.</p>
+      <p class="mic-msg" id="micMsg" hidden></p>
+      <button id="micFix" class="btn primary" hidden>🎙️ Restart my microphone</button>
+      <p class="upload-status" id="uploadStatus"></p>
+    </section>
+
+    <section class="note-out">
+      <div class="live-head">
+        <h2>Transcript</h2>
+        <div class="seg-toggle" role="group" aria-label="Transcript language">
+          <button data-mode="english" class="on">English</button>
+          <button data-mode="original">Original</button>
+        </div>
+      </div>
+      <div id="text" class="note-text" aria-live="polite">
+        <p class="empty">Your words show up here about 15 seconds after you say them.</p>
+      </div>
+      <div class="note-actions">
+        <button id="copy" class="btn primary big" disabled>Copy English</button>
+        <button id="newNote" class="btn" hidden>New note</button>
+        <a id="details" class="btn" hidden>Details &amp; export</a>
+      </div>
+      <p id="progress" class="muted small"></p>
+    </section>
+
+    <section>
+      <h2>Recent notes</h2>
+      <ul id="recent" class="call-list"><li class="muted">Loading…</li></ul>
+    </section>
+  </main>
+
+  <script type="module" src="/js/note.js"></script>
+</body>
+</html>

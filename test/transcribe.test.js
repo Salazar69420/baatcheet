@@ -34,3 +34,11 @@ test('prompt includes context only when given', () => {
   assert.ok(!buildPrompt('').includes('previous line'))
   assert.ok(buildPrompt('Asha: hello').includes('Asha: hello'))
 })
+
+test('voice note prompt differs from the call prompt', async () => {
+  const { buildPrompt } = await import('../server/transcribe.js')
+  assert.match(buildPrompt('', 'note'), /voice note/)
+  assert.match(buildPrompt('earlier words', 'note'), /previous part of the recording/)
+  assert.match(buildPrompt('', 'call'), /phone call/)
+  assert.match(buildPrompt('x'), /previous line in the call/)
+})

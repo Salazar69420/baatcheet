@@ -35,7 +35,8 @@ async function showCall () {
   async function refresh () {
     const data = await api(base)
     const { call, participants, segments, chunks } = data
-    $('callTitle').textContent = participants.map(p => p.name).join(' & ') || 'Call'
+    const people = participants.map(p => p.name).join(' & ')
+    $('callTitle').textContent = call.kind === 'note' ? `Voice note${people ? ` · ${people}` : ''}` : (people || 'Call')
     const dur = call.ended_at ? ` · ${fmtOffset(call.ended_at - call.created_at)}` : ' · not finished'
     $('callMeta').textContent = `${fmtDate(call.created_at)}${dur} · id ${call.id}`
     view.startTime = segments.length ? Math.min(...segments.map(s => s.started_at)) : null

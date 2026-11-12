@@ -19,6 +19,7 @@ invite can reach it.
 ## Features
 
 - 📞 1:1 browser audio calls with no app to install (WebRTC, peer to peer)
+- 🎙️ Voice notes: press record on your own phone, talk (or record a conversation in the room), then copy the English text. Open `/note`
 - 🎙️ Each speaker is recorded locally, which gives clean per-speaker tracks and accurate speaker labels
 - 🇮🇳 Hindi, English and code-switched Hinglish, with the **original** text (Devanagari and Latin) plus a **literal English** translation
 - ⚡ Live transcript during the call, about one chunk (15 s) behind

@@ -22,7 +22,7 @@ function header (call, participants) {
 export function toMarkdown (call, participants, segments) {
   const { when, people } = header(call, participants)
   const start = segments.length ? Math.min(call.created_at, ...segments.map(s => s.started_at)) : call.created_at
-  const out = [`# Call ${call.id}`, '', `- **When:** ${when}`, `- **Who:** ${people}`, '']
+  const out = [`# ${call.kind === 'note' ? 'Voice note' : 'Call'} ${call.id}`, '', `- **When:** ${when}`, `- **Who:** ${people}`, '']
   for (const s of mergeSegments(segments)) {
     if (!s.original && !s.english) continue
     out.push(`**[${offset(s.started_at - start)}] ${s.speaker_name}**`, '')
@@ -35,11 +35,19 @@ export function toMarkdown (call, participants, segments) {
 export function toText (call, participants, segments) {
   const { when, people } = header(call, participants)
   const start = segments.length ? Math.min(call.created_at, ...segments.map(s => s.started_at)) : call.created_at
-  const out = [`Call ${call.id}`, `When: ${when}`, `Who: ${people}`, '']
+  const out = [`${call.kind === 'note' ? 'Voice note' : 'Call'} ${call.id}`, `When: ${when}`, `Who: ${people}`, '']
   for (const s of mergeSegments(segments)) {
     if (!s.original && !s.english) continue
     out.push(`[${offset(s.started_at - start)}] ${s.speaker_name}: ${s.english}`)
     if (s.language !== 'en' && s.original) out.push(`    (original) ${s.original}`)
   }
   return out.join('\n') + '\n'
+}
+
+/** A voice note as one block of text, ready to paste somewhere. mode: 'english' | 'original' */
+export function noteText (segments, mode = 'english') {
+  return mergeSegments(segments)
+    .map(s => (mode === 'original' ? (s.original || s.english) : (s.english || s.original)).trim())
+    .filter(Boolean)
+    .join(' ')
 }

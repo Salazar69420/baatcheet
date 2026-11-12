@@ -33,9 +33,10 @@ export function createPipeline ({ db, config, notify, log = console }) {
       return
     }
 
+    const kind = db.getCall(chunk.call_id)?.kind || 'call'
     const prev = db.previousSegment(chunk.call_id, chunk.started_at)
-    const context = prev?.original ? `${prev.speaker_name}: ${prev.original}`.slice(0, 500) : ''
-    const result = await transcribeMp3(mp3, { apiKey: config.openrouterKey, model: config.model, context })
+    const context = prev?.original ? (kind === 'note' ? prev.original : `${prev.speaker_name}: ${prev.original}`).slice(-500) : ''
+    const result = await transcribeMp3(mp3, { apiKey: config.openrouterKey, model: config.model, context, kind })
 
     if (!result.original && !result.english) {
       db.setChunkStatus(chunk.id, 'silent')

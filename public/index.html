@@ -16,18 +16,29 @@
 
   <main class="home">
     <section class="hero">
-      <h1>Call. Talk in any mix of Hindi &amp; English.<br>Get a word-for-word English transcript.</h1>
+      <h1>Talk in any mix of Hindi &amp; English.<br>Get a word-for-word English transcript.</h1>
       <p class="muted" id="who">…</p>
-      <button id="start" class="btn primary big">Start a call</button>
+      <div class="modes">
+        <button id="start" class="mode-card">
+          <span class="mode-icon">📞</span>
+          <strong>Start a call</strong>
+          <span class="muted">Call a friend in the browser. Both sides get transcribed.</span>
+        </button>
+        <a href="/note" class="mode-card">
+          <span class="mode-icon">🎙️</span>
+          <strong>Record a voice note</strong>
+          <span class="muted">Say your thoughts, or record a talk in the room on your phone. Copy the English.</span>
+        </a>
+      </div>
       <form id="join" class="join">
         <input id="joinInput" placeholder="…or paste a call link / code" aria-label="Call link or code">
         <button class="btn">Join</button>
       </form>
-      <p class="notice">🔴 Every call is recorded and transcribed. Only call people who have agreed to that.</p>
+      <p class="notice">🔴 Every call and voice note is recorded and transcribed. Only record people who have agreed to that.</p>
     </section>
 
     <section>
-      <h2>Recent calls</h2>
+      <h2>Recent</h2>
       <ul id="recent" class="call-list"><li class="muted">Loading…</li></ul>
     </section>
   </main>

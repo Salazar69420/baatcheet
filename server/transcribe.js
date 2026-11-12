@@ -2,10 +2,15 @@ import { spawn } from 'node:child_process'
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
-export function buildPrompt (context) {
+export function buildPrompt (context, kind = 'call') {
+  const note = kind === 'note'
   const lines = [
-    'You are a precise transcription and translation engine for a phone call.',
-    'The audio contains one speaker talking in Hindi, English, or a mix of both (Hinglish).',
+    note
+      ? 'You are a precise transcription and translation engine for a voice note recorded on one phone.'
+      : 'You are a precise transcription and translation engine for a phone call.',
+    note
+      ? 'The audio is usually one person thinking out loud, but may be several people talking in the same room, in Hindi, English, or a mix of both (Hinglish).'
+      : 'The audio contains one speaker talking in Hindi, English, or a mix of both (Hinglish).',
     'Return ONLY a JSON object with exactly these keys:',
     '  "original": a verbatim, word-for-word transcript in the language actually spoken.',
     '              Every Hindi word MUST be written in Devanagari script (e.g. "किसने", "क्या कर रहे हो").',
@@ -19,7 +24,7 @@ export function buildPrompt (context) {
     'Never invent words that are not in the audio.'
   ]
   if (context) {
-    lines.push('', `For context only (do NOT transcribe this), the previous line in the call was: «${context}»`)
+    lines.push('', `For context only (do NOT transcribe this), the previous ${note ? 'part of the recording' : 'line in the call'} was: «${context}»`)
   }
   return lines.join('\n')
 }
@@ -76,7 +81,7 @@ export function toMp3 (inputPath, ffmpeg = 'ffmpeg') {
 /**
  * Send one mp3 chunk to OpenRouter and get the transcript back.
  */
-export async function transcribeMp3 (mp3, { apiKey, model, context, timeoutMs = 90_000 }) {
+export async function transcribeMp3 (mp3, { apiKey, model, context, kind = 'call', timeoutMs = 90_000 }) {
   if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set')
   const body = {
     model,
@@ -85,7 +90,7 @@ export async function transcribeMp3 (mp3, { apiKey, model, context, timeoutMs = 
     messages: [{
       role: 'user',
       content: [
-        { type: 'text', text: buildPrompt(context) },
+        { type: 'text', text: buildPrompt(context, kind) },
         { type: 'input_audio', input_audio: { data: mp3.toString('base64'), format: 'mp3' } }
       ]
     }]

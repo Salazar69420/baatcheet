@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS calls (
   id          TEXT PRIMARY KEY,
   created_at  INTEGER NOT NULL,
   ended_at    INTEGER,
-  title       TEXT
+  title       TEXT,
+  kind        TEXT NOT NULL DEFAULT 'call'
 );
 
 CREATE TABLE IF NOT EXISTS participants (
@@ -56,9 +57,12 @@ CREATE INDEX IF NOT EXISTS idx_chunks_status ON chunks(status);
 export function openDb (file) {
   const db = new DatabaseSync(file)
   db.exec(SCHEMA)
+  // Older databases predate voice notes: add the column in place.
+  const cols = db.prepare('PRAGMA table_info(calls)').all().map(c => c.name)
+  if (!cols.includes('kind')) db.exec("ALTER TABLE calls ADD COLUMN kind TEXT NOT NULL DEFAULT 'call'")
 
   const q = {
-    ensureCall: db.prepare('INSERT OR IGNORE INTO calls (id, created_at) VALUES (?, ?)'),
+    ensureCall: db.prepare('INSERT OR IGNORE INTO calls (id, created_at, kind) VALUES (?, ?, ?)'),
     getCall: db.prepare('SELECT * FROM calls WHERE id = ?'),
     endCall: db.prepare('UPDATE calls SET ended_at = ? WHERE id = ?'),
     reopenCall: db.prepare('UPDATE calls SET ended_at = NULL WHERE id = ?'),
@@ -96,7 +100,7 @@ export function openDb (file) {
   return {
     raw: db,
     close: () => db.close(),
-    ensureCall (id) { q.ensureCall.run(id, Date.now()); q.reopenCall.run(id) },
+    ensureCall (id, kind = 'call') { q.ensureCall.run(id, Date.now(), kind === 'note' ? 'note' : 'call'); q.reopenCall.run(id) },
     getCall: (id) => q.getCall.get(id),
     endCall: (id) => q.endCall.run(Date.now(), id),
     addParticipant: (callId, who) => q.upsertParticipant.run(callId, who.login, who.name, Date.now()),

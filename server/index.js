@@ -79,10 +79,21 @@ app.post('/api/diag', express.json({ limit: '4kb' }), (req, res) => {
 
 // ---- calls ------------------------------------------------------------------
 
-app.post('/api/calls', (req, res) => {
+// kind: 'call' (default, two people over WebRTC) or 'note' (one phone records the room).
+app.post('/api/calls', express.json({ limit: '1kb' }), (req, res) => {
   const id = randomBytes(9).toString('base64url')
-  db.ensureCall(id)
-  res.status(201).json({ id })
+  const kind = req.body?.kind === 'note' ? 'note' : 'call'
+  db.ensureCall(id, kind)
+  if (kind === 'note') console.log(`[note] ${identify(req)?.name || 'unknown'} started voice note ${id}`)
+  res.status(201).json({ id, kind })
+})
+
+// A voice note has no call room to empty out, so the recorder says when it is finished.
+app.post('/api/calls/:id/end', (req, res) => {
+  const call = requireCall(req, res)
+  if (!call) return
+  db.endCall(call.id)
+  res.status(204).end()
 })
 
 app.get('/api/calls', (req, res) => {
@@ -183,6 +194,10 @@ app.get('/api/chunks/:chunkId/audio', (req, res) => {
 
 // ---- pages ------------------------------------------------------------------
 
+app.get('/note/:id', (req, res) => {
+  if (!CALL_ID_RE.test(req.params.id)) return res.status(400).send('Bad note id')
+  res.sendFile(path.join(publicDir, 'note.html'))
+})
 app.get('/call/:id', (req, res) => {
   if (!CALL_ID_RE.test(req.params.id)) return res.status(400).send('Bad call id')
   res.sendFile(path.join(publicDir, 'call.html'))
