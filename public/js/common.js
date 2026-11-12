@@ -16,17 +16,63 @@ let meCache = null
 export async function getMe ({ ask = true } = {}) {
   if (meCache) return meCache
   const res = await fetch('/api/me', { headers: nameHeader() })
+  if (!res.ok) throw new Error(`Server answered HTTP ${res.status}`)
   const info = await res.json()
   if (!info.me && ask) {
-    let name = storedName()
-    while (!name) {
-      name = (prompt('Your name (shown to the other person and in transcripts):') || '').trim().slice(0, 40)
-    }
+    // In-page form, not window.prompt(): some in-app browsers make prompt() return
+    // null instantly, which used to spin forever and freeze the page.
+    const name = storedName() || await askName()
     setStoredName(name)
     info.me = { login: `local:${name}`, name, source: 'local' }
   }
   meCache = info
   return info
+}
+
+/** Ask for a display name with an in-page dialog. Resolves with the trimmed name. */
+export function askName ({ initial = '' } = {}) {
+  return new Promise(resolve => {
+    const input = h('input', {
+      name: 'name', required: true, maxlength: 40, autocomplete: 'nickname',
+      placeholder: 'e.g. Kartik', 'aria-label': 'Your name'
+    })
+    input.value = initial
+    const form = h('form', { class: 'name-form' },
+      h('h2', {}, 'What should we call you?'),
+      h('p', { class: 'muted' }, 'Shown to the other person and in transcripts.'),
+      input,
+      h('button', { class: 'btn primary' }, 'Continue')
+    )
+    const overlay = h('div', { class: 'overlay', role: 'dialog', 'aria-modal': 'true' }, form)
+    form.onsubmit = (e) => {
+      e.preventDefault()
+      const v = input.value.trim().slice(0, 40)
+      if (!v) return
+      overlay.remove()
+      resolve(v)
+    }
+    document.body.append(overlay)
+    input.focus()
+  })
+}
+
+/** Banner for in-app browsers (WhatsApp, Instagram, …) where calls often can't use the mic. */
+export function warnIfInAppBrowser () {
+  const ua = navigator.userAgent || ''
+  const inApp = /FBAN|FBAV|Instagram|WhatsApp|Line\/|MicroMessenger|Snapchat|; wv\)/i.test(ua)
+  const noMic = !window.isSecureContext || !navigator.mediaDevices?.getUserMedia
+  if (!inApp && !noMic) return false
+  const copy = h('button', {
+    class: 'btn',
+    onclick: async () => {
+      try { await navigator.clipboard.writeText(location.href); copy.textContent = 'Copied!' } catch { prompt('Copy this link:', location.href) }
+    }
+  }, 'Copy link')
+  const msg = noMic
+    ? 'This browser can’t use the microphone here. Open this link in Chrome or Safari (make sure Tailscale is on).'
+    : 'You’re inside an app’s built-in browser. Calls may not work here: tap ⋯ and choose “Open in browser”, or copy the link into Chrome or Safari.'
+  document.body.prepend(h('div', { class: 'banner' }, h('span', {}, msg), copy))
+  return true
 }
 
 export function displayName () {

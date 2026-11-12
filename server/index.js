@@ -49,6 +49,7 @@ app.get('/healthz', (req, res) => res.type('text').send('ok'))
 
 app.get('/api/me', (req, res) => {
   const who = identify(req)
+  console.log(`[visit] ${who ? `${who.name} <${who.login}> via ${who.source}` : 'unnamed visitor (no Tailscale identity yet)'} · ${String(req.headers['user-agent'] || '').slice(0, 120)}`)
   res.json({
     me: who,
     tailscale: who?.source === 'tailscale',

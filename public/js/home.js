@@ -1,9 +1,10 @@
-import { api, getMe, h, setStoredName } from './common.js'
+import { api, getMe, h, setStoredName, askName, displayName, warnIfInAppBrowser } from './common.js'
 import { renderCallList } from './history.js'
 
 const $ = (id) => document.getElementById(id)
 
 async function main () {
+  warnIfInAppBrowser()
   const info = await getMe()
   $('who').replaceChildren(
     `Signed in as ${info.me.name}`,
@@ -42,9 +43,10 @@ async function main () {
   renderCallList($('recent'), calls.slice(0, 10))
 }
 
-function rename () {
-  const name = (prompt('Your name:') || '').trim().slice(0, 40)
-  if (name) { setStoredName(name); location.reload() }
+async function rename () {
+  const name = await askName({ initial: displayName() })
+  setStoredName(name)
+  location.reload()
 }
 
 main().catch(err => { console.error(err); $('who').textContent = `Error: ${err.message}` })

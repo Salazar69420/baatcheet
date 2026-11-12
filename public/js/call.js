@@ -1,4 +1,4 @@
-import { getMe, displayName } from './common.js'
+import { getMe, displayName, warnIfInAppBrowser } from './common.js'
 import { Signal } from './ws.js'
 import { PeerLink } from './rtc.js'
 import { ChunkRecorder, pickMime } from './recorder.js'
@@ -25,6 +25,7 @@ let ended = false
 let transcript
 
 async function main () {
+  warnIfInAppBrowser()
   $('link').value = location.href
   $('copy').onclick = async () => {
     try { await navigator.clipboard.writeText(location.href); $('copy').textContent = 'Copied!' } catch { $('link').select() }
@@ -46,6 +47,10 @@ async function main () {
 
   if (pickMime() === null) ui.upload('⚠ This browser cannot record audio — the call works but will not be transcribed.')
 
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+    ui.status('This browser can’t use the microphone on this page. Open the link in Chrome or Safari over https://….ts.net with Tailscale on.', 'error')
+    return
+  }
   ui.status('Asking for microphone…')
   try {
     localStream = await navigator.mediaDevices.getUserMedia({

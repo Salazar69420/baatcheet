@@ -81,7 +81,11 @@ export function attachSignaling (server, { db, config, onRoomEmpty }) {
           const who = identify(req, cleanName(msg.name))
           if (!who) return peer.send({ type: 'error', error: 'need-name' })
           const res = rooms.join(msg.callId, Object.assign(peer, { login: who.login, name: who.name }))
-          if (!res.ok) return peer.send({ type: 'full' })
+          if (!res.ok) {
+            console.log(`[call ${msg.callId}] ${who.name} rejected: call is full`)
+            return peer.send({ type: 'full' })
+          }
+          console.log(`[call ${msg.callId}] ${who.name} joined (${res.others.length + 1}/${rooms.maxPeers})`)
           peer.callId = msg.callId
           db.ensureCall(peer.callId)
           db.addParticipant(peer.callId, who)
@@ -115,6 +119,7 @@ export function attachSignaling (server, { db, config, onRoomEmpty }) {
       const callId = peer.callId
       peer.callId = null
       const remaining = rooms.leave(callId, peer)
+      console.log(`[call ${callId}] ${peer.name} left (${remaining.length} remaining)`)
       for (const other of remaining) other.send({ type: 'peer-left', id: peer.id })
       if (remaining.length === 0) onRoomEmpty?.(callId)
     }
