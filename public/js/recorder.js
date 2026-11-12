@@ -4,17 +4,28 @@
 // first blob has the container header, so later blobs can't be decoded on their own.
 // Restarting the recorder gives every chunk its own header (gap ≈ a few ms).
 
-const MIME_CANDIDATES = [
+const WEBM_FIRST = [
   'audio/webm;codecs=opus',
   'audio/ogg;codecs=opus',
   'audio/mp4;codecs=mp4a.40.2',
   'audio/mp4',
   'audio/webm'
 ]
+// Safari (all iPhone/iPad browsers are Safari underneath) says it can record WebM,
+// but its native and most reliable recorder output is MP4/AAC.
+const MP4_FIRST = ['audio/mp4;codecs=mp4a.40.2', 'audio/mp4', ...WEBM_FIRST]
+
+export function isAppleWebKit () {
+  const ua = navigator.userAgent || ''
+  const iOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  const desktopSafari = /Safari\//.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/.test(ua)
+  return iOS || desktopSafari
+}
 
 export function pickMime () {
   if (typeof MediaRecorder === 'undefined') return null
-  return MIME_CANDIDATES.find(t => MediaRecorder.isTypeSupported(t)) || ''
+  const list = isAppleWebKit() ? MP4_FIRST : WEBM_FIRST
+  return list.find(t => MediaRecorder.isTypeSupported(t)) || ''
 }
 
 export class ChunkRecorder extends EventTarget {
@@ -59,9 +70,10 @@ export class ChunkRecorder extends EventTarget {
 
     rec.ondataavailable = (e) => { if (e.data?.size) parts.push(e.data) }
     rec.onstop = () => {
-      const blob = new Blob(parts, { type: rec.mimeType || this.mime || 'audio/webm' })
+      const mime = parts[0]?.type || rec.mimeType || this.mime || ''
+      const blob = new Blob(parts, { type: mime })
       if (blob.size > 0) {
-        this.pending.push({ seq, startedAt, durationMs: Math.round(performance.now() - t0), blob, track: this.track })
+        this.pending.push({ seq, startedAt, durationMs: Math.round(performance.now() - t0), blob, track: this.track, mime })
         this._drain()
       }
       this.dispatchEvent(new CustomEvent('chunk-closed', { detail: { seq } }))

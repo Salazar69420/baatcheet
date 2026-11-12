@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import { JobQueue } from './queue.js'
 import { toMp3, transcribeMp3 } from './transcribe.js'
 
@@ -13,7 +14,19 @@ export function createPipeline ({ db, config, notify, log = console }) {
     db.bumpAttempts(chunk.id)
     notify(chunk.call_id, { type: 'chunk', id: chunk.id, status: 'processing' })
 
-    const { mp3, maxVolumeDb } = await toMp3(chunk.path, config.ffmpeg)
+    let converted
+    try {
+      converted = await toMp3(chunk.path, config.ffmpeg)
+    } catch (err) {
+      // A file ffmpeg can't read won't get better on retry; record what it starts with.
+      if (/Invalid data|EBML|moov atom not found|could not find codec/i.test(err.message)) {
+        let head = ''
+        try { head = fs.readFileSync(chunk.path).subarray(0, 16).toString('hex') } catch {}
+        throw Object.assign(new Error(`unreadable audio (${chunk.mime}, ${fileSize(chunk.path)} bytes, starts ${head}): ${err.message.slice(-200)}`), { retryable: false })
+      }
+      throw err
+    }
+    const { mp3, maxVolumeDb } = converted
     if (maxVolumeDb !== null && maxVolumeDb < config.silenceDb) {
       db.setChunkStatus(chunk.id, 'silent')
       notify(chunk.call_id, { type: 'chunk', id: chunk.id, status: 'silent' })
@@ -61,4 +74,8 @@ export function createPipeline ({ db, config, notify, log = console }) {
       return ids.length
     }
   }
+}
+
+function fileSize (p) {
+  try { return fs.statSync(p).size } catch { return 0 }
 }

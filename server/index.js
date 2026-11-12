@@ -11,6 +11,7 @@ import { identify, slug } from './identity.js'
 import { attachSignaling, CALL_ID_RE } from './signaling.js'
 import { createPipeline } from './pipeline.js'
 import { toMarkdown, toText } from './export.js'
+import { sniffAudio } from './sniff.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const publicDir = path.join(here, '..', 'public')
@@ -57,6 +58,21 @@ app.get('/api/me', (req, res) => {
     model: config.model,
     chunkSeconds: config.chunkSeconds
   })
+})
+
+// In-call connection counters from the browser (no audio), logged for troubleshooting.
+app.post('/api/diag', express.json({ limit: '4kb' }), (req, res) => {
+  const who = identify(req)
+  const d = req.body || {}
+  const a = d.audio || {}
+  const n = (v) => (Number.isFinite(Number(v)) ? Number(v) : '?')
+  const str = (v) => String(v ?? '').slice(0, 60)
+  console.log(`[diag call ${str(d.callId)}] ${who?.name || 'unknown'} → ${str(d.peer)}: ` +
+    `ice=${str(d.ice)} conn=${str(d.conn)} route=${str(d.route) || '?'} ` +
+    `sent=${n(d.sentKB)}KB recv=${n(d.recvKB)}KB level=${n(d.recvLevel)} lost=${n(d.packetsLost)} ` +
+    `audio=${a.paused ? 'PAUSED' : 'playing'}${a.muted ? ' MUTED' : ''} ready=${n(a.readyState)}${a.playError ? ` playError=${str(a.playError)}` : ''} ` +
+    `mic=${d.micEnabled === false ? 'muted' : str(d.micState) || '?'} rec=${str(d.recMime) || 'none'}`)
+  res.status(204).end()
 })
 
 // ---- calls ------------------------------------------------------------------
@@ -125,8 +141,12 @@ app.post('/api/calls/:id/chunks',
     }
     if (!Buffer.isBuffer(req.body) || req.body.length === 0) return res.status(400).json({ error: 'empty body' })
 
-    const mime = String(req.headers['content-type'] || 'audio/webm').split(';')[0].trim().toLowerCase()
-    const ext = EXT_BY_MIME[mime.replace('video/', 'audio/')] || 'webm'
+    // Trust the bytes, not the label: Safari sometimes sends an empty or wrong type.
+    const declared = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase().replace('video/', 'audio/')
+    const sniffed = sniffAudio(req.body)
+    const mime = sniffed?.mime || (EXT_BY_MIME[declared] ? declared : 'application/octet-stream')
+    const ext = sniffed?.ext || EXT_BY_MIME[declared] || 'bin'
+    if (!sniffed) console.warn(`[chunk] ${who.name} seq ${req.query.seq}: unrecognised audio (declared ${declared || 'none'}, first bytes ${req.body.subarray(0, 12).toString('hex')})`)
     const dir = path.join(recordingsDir, call.id)
     fs.mkdirSync(dir, { recursive: true })
     const file = path.join(dir, `${slug(who.login)}-${trackId}-${String(seq).padStart(5, '0')}.${ext}`)

@@ -8,11 +8,13 @@ export function buildPrompt (context) {
     'The audio contains one speaker talking in Hindi, English, or a mix of both (Hinglish).',
     'Return ONLY a JSON object with exactly these keys:',
     '  "original": a verbatim, word-for-word transcript in the language actually spoken.',
-    '              Write Hindi words in Devanagari and English words in Latin script, exactly as said.',
+    '              Every Hindi word MUST be written in Devanagari script (e.g. "किसने", "क्या कर रहे हो").',
+    '              Never romanize Hindi (wrong: "kisne", "kya kar rahe ho").',
+    '              English words stay in Latin script exactly as said (e.g. "मैं office जा रहा हूँ").',
     '              Keep filler words, repetitions and false starts. Do not correct grammar.',
     '  "english":  a faithful, literal, word-for-word English translation of "original".',
     '              Do not summarize, shorten, explain, or add anything.',
-    '  "language": one of "hi", "en", "mixed", or "none".',
+    '  "language": "hi" if only Hindi, "en" if only English, "mixed" if both, "none" if no speech.',
     'If there is no intelligible speech, return {"original":"","english":"","language":"none"}.',
     'Never invent words that are not in the audio.'
   ]

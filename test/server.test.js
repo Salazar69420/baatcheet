@@ -83,3 +83,13 @@ test('database round-trip: chunks dedupe per track and segments come back ordere
   assert.equal(db.listCalls()[0].segment_count, 2)
   db.close()
 })
+
+test('sniffs audio containers from their first bytes', async () => {
+  const { sniffAudio } = await import('../server/sniff.js')
+  const pad = (b) => Buffer.concat([b, Buffer.alloc(16)])
+  assert.deepEqual(sniffAudio(pad(Buffer.from('1a45dfa3', 'hex'))), { mime: 'audio/webm', ext: 'webm' })
+  assert.deepEqual(sniffAudio(pad(Buffer.from('00000020667479704d344120', 'hex'))), { mime: 'audio/mp4', ext: 'm4a' })
+  assert.deepEqual(sniffAudio(pad(Buffer.from('OggS'))), { mime: 'audio/ogg', ext: 'ogg' })
+  assert.equal(sniffAudio(pad(Buffer.from('hello world!'))), null)
+  assert.equal(sniffAudio(Buffer.from('short')), null)
+})

@@ -162,3 +162,6 @@ input {
   display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between;
   padding: .75rem 1rem; background: var(--mine); border-bottom: 1px solid var(--warn); color: var(--text);
 }
+.net { margin: 0; font-size: .8rem; color: var(--muted); min-height: 1.1em; }
+.net[data-kind="warn"] { color: var(--warn); }
+#sound[hidden] { display: none; }
