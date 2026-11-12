@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - name: Syntax-check browser code
+        run: for f in public/js/*.js; do node --check "$f"; done
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t baatcheet:ci .
+      - name: Smoke test container
+        run: |
+          docker run -d --name bc -p 3000:3000 baatcheet:ci
+          for i in $(seq 1 20); do curl -fs localhost:3000/healthz && exit 0; sleep 1; done
+          docker logs bc; exit 1

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>Call · baatcheet</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="call-page">
+  <header class="bar">
+    <a href="/" class="brand">baatcheet</a>
+    <span id="rec" class="rec-badge" hidden>● Recording</span>
+  </header>
+
+  <main class="call">
+    <section class="stage">
+      <div class="people">
+        <div class="person me">
+          <div class="avatar meter" id="meMeter"><span id="meInitial">?</span></div>
+          <div class="label" id="meName">You</div>
+        </div>
+        <div class="person them">
+          <div class="avatar meter" id="themMeter"><span id="themInitial">…</span></div>
+          <div class="label" id="themName">Waiting for your friend</div>
+        </div>
+      </div>
+
+      <p id="status" class="status">Connecting…</p>
+
+      <div class="share" id="share">
+        <input id="link" readonly aria-label="Call link">
+        <button id="copy" class="btn">Copy link</button>
+      </div>
+
+      <div class="controls">
+        <button id="mute" class="btn round" aria-pressed="false" title="Mute">🎙️</button>
+        <button id="hangup" class="btn round danger" title="Hang up">✕</button>
+      </div>
+      <p class="upload-status" id="uploadStatus"></p>
+      <audio id="remoteAudio" autoplay playsinline></audio>
+    </section>
+
+    <section class="live">
+      <div class="live-head">
+        <h2>Live transcript</h2>
+        <div class="seg-toggle" role="group" aria-label="Transcript language">
+          <button data-mode="both" class="on">Both</button>
+          <button data-mode="english">English</button>
+          <button data-mode="original">Original</button>
+        </div>
+      </div>
+      <div id="transcript" class="transcript" data-mode="both">
+        <p class="empty">Lines appear here a few seconds after each person speaks.</p>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/js/call.js"></script>
+</body>
+</html>

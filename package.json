@@ -1,0 +1,32 @@
+{
+  "name": "baatcheet",
+  "version": "0.1.0",
+  "description": "Self-hosted 1:1 browser calls that record each speaker and transcribe Hindi/English/Hinglish into word-for-word English transcripts.",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "dev": "node --env-file-if-exists=.env --watch server/index.js",
+    "test": "node --test test/",
+    "transcribe": "node --env-file-if-exists=.env scripts/transcribe-file.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "keywords": [
+    "webrtc",
+    "transcription",
+    "translation",
+    "hindi",
+    "hinglish",
+    "gemini",
+    "openrouter",
+    "self-hosted",
+    "tailscale"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.1.0",
+    "ws": "^8.18.0"
+  }
+}

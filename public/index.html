@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>baatcheet</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="bar">
+    <a href="/" class="brand">baatcheet</a>
+    <nav><a href="/history.html">History</a></nav>
+  </header>
+
+  <main class="home">
+    <section class="hero">
+      <h1>Call. Talk in any mix of Hindi &amp; English.<br>Get a word-for-word English transcript.</h1>
+      <p class="muted" id="who">…</p>
+      <button id="start" class="btn primary big">Start a call</button>
+      <form id="join" class="join">
+        <input id="joinInput" placeholder="…or paste a call link / code" aria-label="Call link or code">
+        <button class="btn">Join</button>
+      </form>
+      <p class="notice">🔴 Every call is recorded and transcribed. Only call people who have agreed to that.</p>
+    </section>
+
+    <section>
+      <h2>Recent calls</h2>
+      <ul id="recent" class="call-list"><li class="muted">Loading…</li></ul>
+    </section>
+  </main>
+
+  <script type="module" src="/js/home.js"></script>
+</body>
+</html>
